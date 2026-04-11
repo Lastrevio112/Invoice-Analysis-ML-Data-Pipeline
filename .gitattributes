@@ -1,0 +1,4 @@
+*.sql linguist-detectable=true
+*.sql linguist-generated=false
+target/** linguist-generated=true
+dbt_packages/** linguist-vendored=true
