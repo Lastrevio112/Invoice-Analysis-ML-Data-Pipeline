@@ -13,3 +13,5 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 testing_stuff.ipynb
+# unnecessary folder that was used just for testing
+sample_invoices
