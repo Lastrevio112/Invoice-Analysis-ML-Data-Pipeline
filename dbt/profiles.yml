@@ -4,8 +4,8 @@ invoice_pipeline:
     dev:
       type: bigquery
       method: service-account
-      project: invoiceanalysispipeline  # your GCP project ID from the URL in your screenshot
-      dataset: invoices                 # just one dataset, keep it simple
+      project: invoiceanalysispipeline  
+      dataset: invoices                 
       location: EU
       keyfile: /workspace/.gcp-service-account.json
       threads: 4
