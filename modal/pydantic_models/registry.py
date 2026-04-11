@@ -10,8 +10,6 @@ DS_MODEL_REGISTRY = {
     # add new mappings here...
 }
 
-# Unfortunately we have to maintain two registries because modal.com can't serialize class parameters so we need to pass the parameter as a string. Ugly workaround but I haven't found another solution.
-DS_MODEL_NAME_REGISTRY = {
-    1: "InvoiceDocument_DS1",
-    # add new mappings here...
-}
+# Unfortunately we need two registries because modal.com can't serialize class parameters so we need to pass the parameter as a string. 
+# Ugly workaround but I haven't found another solution.
+DS_MODEL_NAME_REGISTRY = {k: v.__name__ for k, v in DS_MODEL_REGISTRY.items()}
