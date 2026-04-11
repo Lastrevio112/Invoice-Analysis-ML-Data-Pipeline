@@ -4,7 +4,14 @@ sys.path.append('/workspace/modal') #So that this is visible from workspace/ and
 from pydantic_models.ds1 import InvoiceDocument_DS1
 # Later we can add ds2, etc.
 
-# This will be imported by invoice_to_json.py to map models to data source ids:
+# These will be imported by invoice_to_json.py to map models to data source ids:
 DS_MODEL_REGISTRY = {
     1: InvoiceDocument_DS1,
+    # add new mappings here...
+}
+
+# Unfortunately we have to maintain two registries because modal.com can't serialize class parameters so we need to pass the parameter as a string. Ugly workaround but I haven't found another solution.
+DS_MODEL_NAME_REGISTRY = {
+    1: "InvoiceDocument_DS1",
+    # add new mappings here...
 }

@@ -13,7 +13,7 @@ import modal
 from dotenv import load_dotenv
 from google.cloud import bigquery
 
-from pydantic_models.registry import DS_MODEL_REGISTRY
+from pydantic_models.registry import DS_MODEL_REGISTRY, DS_MODEL_NAME_REGISTRY
 
 load_dotenv()
 
@@ -34,11 +34,11 @@ bq = bigquery.Client(project="invoiceanalysispipeline")
 def processNewFilesInDatasource(DataSourceId: int):
     bucket_name = f"ds{DataSourceId}"
     bigquery_destination_table = f"invoiceanalysispipeline.bronze.ds_{DataSourceId}_raw_json"
-    pydantic_model = DS_MODEL_REGISTRY.get(DataSourceId)    #mapping between ds id and pydantic model is defined in registry.py
 
-    if pydantic_model is None:
-        raise ValueError(f"No Pydantic model registered for datasource {DataSourceId}")
-
+    model_name = DS_MODEL_NAME_REGISTRY.get(ds_id) #mapping between ds id and pydantic model is defined in registry.py
+    if model_name is None:
+        raise ValueError(f"No Pydantic model registered for datasource {ds_id}")   
+    
     MAX_FILES_PER_RUN = 500 # GitHub actions has a max runtime of 6 hours, and based on testing, processing each file takes around 30-40 seconds on average. So we can process around 540 files in one run to avoid timeouts, but to be safe we set the limit a bit lower.
 
     response = s3.list_objects_v2(Bucket=bucket_name, Prefix="unprocessed/")
@@ -68,7 +68,7 @@ def processNewFilesInDatasource(DataSourceId: int):
         s3.delete_object(Bucket=bucket_name, Key=key)
 
         # Call already-deployed Modal function
-        result_json = extract_invoice.remote(img_bytes, pydantic_model)
+        result_json = extract_invoice.remote(img_bytes, model_name)
 
         # Insert into BigQuery bronze
         row = {

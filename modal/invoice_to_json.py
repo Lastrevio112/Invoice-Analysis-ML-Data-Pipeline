@@ -17,6 +17,7 @@ modal_image = (
         "bitsandbytes",
         "pydantic",
     )
+    .add_local_dir("../modal/pydantic_models", remote_path="/root/pydantic_models")
 )
 
 # This will be added once through the windows powershell terminal and then cached by Modal.
@@ -29,8 +30,11 @@ hf_cache = modal.Volume.from_name("hf-cache", create_if_missing=True)
     timeout=900,
     volumes={"/root/.cache/huggingface": hf_cache},
 )
-def extract_invoice(img_bytes: bytes, pydantic_model: type):
-    # This function reads the jpeg that was converted to bytes and returns a JSON with the appropriate structure defined through Pydantic.
+# This function reads the jpeg that was converted to bytes and returns a JSON with the appropriate structure defined through Pydantic.
+def extract_invoice(img_bytes: bytes, pydantic_model_name: str):
+    import sys
+    sys.path.append("/root")  # makes pydantic_models package importable
+
     import gc
     import json
     import os
@@ -50,6 +54,18 @@ def extract_invoice(img_bytes: bytes, pydantic_model: type):
         ExtractionVlmPipeline,
         ImageDocumentBackend,
     )
+
+    # We keep yet a THIRD model registry hard-coded here because modal.com can't serialize classes directly.
+    from pydantic_models.ds1 import InvoiceDocument_DS1
+
+    MODEL_REGISTRY = {
+        "InvoiceDocument_DS1": InvoiceDocument_DS1,
+        # add new mappings here...
+    }
+
+    pydantic_model = MODEL_REGISTRY.get(pydantic_model_name)
+    if pydantic_model is None:
+        raise ValueError(f"Unknown model: {pydantic_model_name}")
 
     acc_options = AcceleratorOptions(device=AcceleratorDevice.CUDA)
     pipeline_options = VlmExtractionPipelineOptions(accelerator_options=acc_options)
