@@ -30,7 +30,7 @@ def processNewFilesInDatasource(DataSourceId: int):
     bigquery_destination_table = f"invoiceanalysispipeline.bronze.ds_{DataSourceId}_raw_json"
 
     response = s3.list_objects_v2(Bucket=bucket_name, Prefix="unprocessed/")
-    files = [obj["Key"] for obj in response.get("Contents", [])]
+    files = [obj["Key"] for obj in response.get("Contents", []) if obj["Key"].endswith((".jpg", ".jpeg", ".png", ".pdf"))]
 
     if not files:
         print("No new files to process for datasource ", DataSourceId)
