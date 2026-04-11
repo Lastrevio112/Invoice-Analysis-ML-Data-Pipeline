@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: bronze
+    dataset: bronze
+    tables:
+      - name: ds_1_raw_invoices
+        description: "Raw invoice data ingested through Python by GitHub actions, after it has been inferred by Docling ML model ran on Modal.com. The dataset can be found here: https://huggingface.co/datasets/katanaml-org/invoices-donut-data-v1/viewer/default/validation"

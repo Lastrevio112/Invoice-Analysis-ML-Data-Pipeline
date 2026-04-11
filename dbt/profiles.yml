@@ -1,0 +1,12 @@
+invoice_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: invoiceanalysispipeline  # your GCP project ID from the URL in your screenshot
+      dataset: invoices                 # just one dataset, keep it simple
+      location: EU
+      keyfile: /workspace/.gcp-service-account.json
+      threads: 4
+      timeout_seconds: 900
