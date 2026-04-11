@@ -1,0 +1,8 @@
+modal
+boto3
+google-cloud-bigquery
+polars
+dbt-bigquery
+jupyterlab
+ipykernel
+notebook

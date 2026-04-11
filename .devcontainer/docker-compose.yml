@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace
+    command: sleep infinity
+    environment:
+      - PYTHONPATH=/workspace
+      - DBT_PROFILES_DIR=/workspace/dbt
+    shm_size: '2gb'
+    env_file:
+      - ../.env  # for HF_TOKEN, R2 keys, etc.
