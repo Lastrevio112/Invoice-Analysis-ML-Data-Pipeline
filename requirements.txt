@@ -6,3 +6,4 @@ dbt-bigquery
 jupyterlab
 ipykernel
 notebook
+dotenv
