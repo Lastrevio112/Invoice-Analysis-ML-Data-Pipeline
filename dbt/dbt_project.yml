@@ -17,6 +17,7 @@ models:
   invoice_pipeline:
     silver:
       +materialized: incremental
+      +incremental_strategy: merge  #upsert
       +schema: silver
     gold:
       +materialized: table
