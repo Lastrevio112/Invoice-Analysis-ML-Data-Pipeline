@@ -1,0 +1,1 @@
+SELECT * FROM {{source('bronze', 'ds_1_raw_json')}}

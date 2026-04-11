@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: ds1_invoice_lines
+    columns:
+      - name: unique_invoice_line_no
+        tests:
+          - unique
+          - not_null
+      - name: unique_invoice_no
+        tests:
+          - not_null

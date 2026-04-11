@@ -5,7 +5,7 @@ invoice_pipeline:
       type: bigquery
       method: service-account
       project: invoiceanalysispipeline  
-      dataset: invoices                 
+      dataset: invoices              
       location: EU
       keyfile: /workspace/.gcp-service-account.json
       threads: 4

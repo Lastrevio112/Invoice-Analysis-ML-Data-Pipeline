@@ -16,8 +16,8 @@ WITH flattened AS (
     JSON_VALUE(raw_json, '$.gt_parse.header.seller_tax_id')  AS seller_tax_id,
 
     -- summary fields
-    CAST(JSON_VALUE(raw_json, '$.gt_parse.summary.total_net_worth') AS FLOAT64) AS total_net_worth,
-    CAST(JSON_VALUE(raw_json, '$.gt_parse.summary.total_vat')       AS FLOAT64) AS total_vat,
+    SAFE_CAST(JSON_VALUE(raw_json, '$.gt_parse.summary.total_net_worth') AS FLOAT64) AS total_net_worth,
+    SAFE_CAST(JSON_VALUE(raw_json, '$.gt_parse.summary.total_vat')       AS FLOAT64) AS total_vat,
 
     -- explode the items array
     JSON_QUERY_ARRAY(raw_json, '$.gt_parse.items') AS items,
@@ -32,7 +32,7 @@ SELECT
     COALESCE(invoice_no, 'missingin'), '-', 
     COALESCE(client_tax_id, 'missingcti'), '-', 
     COALESCE(seller_tax_id, 'missingsti'), '-',
-    CAST(ROW_NUMBER() OVER (PARTITION BY (JSON_VALUE(item, '$.item_desc')) ORDER BY (JSON_VALUE(item, '$.item_desc'))) AS STRING)
+    CAST(ROW_NUMBER() OVER (PARTITION BY invoice_no, client_tax_id, seller_tax_id ORDER BY JSON_VALUE(item, '$.item_desc')   ) AS STRING)
     ) AS unique_invoice_line_no,
 
   CONCAT(
@@ -45,7 +45,7 @@ SELECT
   client,
   client_tax_id,
   iban,
-  invoice_date,
+  SAFE_CAST(invoice_date AS DATE) AS invoice_date,
   invoice_no,
   seller,
   seller_tax_id,
@@ -53,10 +53,10 @@ SELECT
   total_vat,
 
   -- extract fields from each exploded item
-  JSON_VALUE(item, '$.item_desc')                        AS item_desc,
-  CAST(JSON_VALUE(item, '$.item_net_price') AS FLOAT64)  AS item_net_price,
-  CAST(JSON_VALUE(item, '$.item_qty')       AS INT64)    AS item_qty,
-  CAST(JSON_VALUE(item, '$.item_vat')       AS FLOAT64)  AS item_vat
+  JSON_VALUE(item, '$.item_desc')                                          AS item_desc,
+  SAFE_CAST(JSON_VALUE(item, '$.item_net_price') AS FLOAT64)               AS item_net_price,
+  SAFE_CAST(SAFE_CAST(JSON_VALUE(item, '$.item_qty') AS FLOAT64) AS INT64) AS item_qty,
+  SAFE_CAST(JSON_VALUE(item, '$.item_vat')       AS FLOAT64)               AS item_vat
 
 FROM flattened,
 UNNEST(COALESCE(JSON_QUERY_ARRAY(raw_json, '$.gt_parse.items'), ARRAY<JSON>[]))  AS item --this line of code makes sure malformed receipts produce zero item rows rather than disappearing entirely from our lineage
