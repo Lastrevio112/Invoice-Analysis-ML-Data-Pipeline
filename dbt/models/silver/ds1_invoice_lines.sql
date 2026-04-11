@@ -22,7 +22,9 @@ WITH flattened AS (
     -- explode the items array
     JSON_QUERY_ARRAY(raw_json, '$.gt_parse.items') AS items,
 
-    raw_json
+    raw_json,
+
+    ROW_NUMBER() OVER (PARTITION BY JSON_VALUE(raw_json, '$.gt_parse.header.invoice_no') ORDER BY SAFE_CAST(JSON_VALUE(raw_json, '$.gt_parse.summary.total_net_worth') AS FLOAT64)) AS rn --for de-duplication in case someone inserts an invoice multiple times in the same bucket
 
   FROM `invoiceanalysispipeline.bronze.ds_1_raw_json`
 )
@@ -60,3 +62,4 @@ SELECT
 
 FROM flattened,
 UNNEST(COALESCE(JSON_QUERY_ARRAY(raw_json, '$.gt_parse.items'), ARRAY<JSON>[]))  AS item --this line of code makes sure malformed receipts produce zero item rows rather than disappearing entirely from our lineage
+WHERE rn = 1
