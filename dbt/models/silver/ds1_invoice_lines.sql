@@ -10,7 +10,7 @@ WITH flattened AS (
     JSON_VALUE(raw_json, '$.gt_parse.header.client')         AS client,
     JSON_VALUE(raw_json, '$.gt_parse.header.client_tax_id')  AS client_tax_id,
     JSON_VALUE(raw_json, '$.gt_parse.header.iban')           AS iban,
-    JSON_VALUE(raw_json, '$.gt_parse.header.invoice_date')   AS invoice_date,
+    SAFE_CAST(JSON_VALUE(raw_json, '$.gt_parse.header.invoice_date') AS DATE)   AS invoice_date,
     JSON_VALUE(raw_json, '$.gt_parse.header.invoice_no')     AS invoice_no,
     JSON_VALUE(raw_json, '$.gt_parse.header.seller')         AS seller,
     JSON_VALUE(raw_json, '$.gt_parse.header.seller_tax_id')  AS seller_tax_id,
@@ -45,7 +45,7 @@ SELECT
   client,
   client_tax_id,
   iban,
-  SAFE_CAST(invoice_date AS DATE) AS invoice_date,
+  invoice_date,
   invoice_no,
   seller,
   seller_tax_id,
@@ -55,7 +55,7 @@ SELECT
   -- extract fields from each exploded item
   JSON_VALUE(item, '$.item_desc')                                          AS item_desc,
   SAFE_CAST(JSON_VALUE(item, '$.item_net_price') AS FLOAT64)               AS item_net_price,
-  SAFE_CAST(SAFE_CAST(JSON_VALUE(item, '$.item_qty') AS FLOAT64) AS INT64) AS item_qty,
+  SAFE_CAST(SAFE_CAST(JSON_VALUE(item, '$.item_qty') AS FLOAT64) AS INT64) AS item_qty,  --bigquery can't convert 1.0 from string to int so it needs to be passed to float in between
   SAFE_CAST(JSON_VALUE(item, '$.item_vat')       AS FLOAT64)               AS item_vat
 
 FROM flattened,
