@@ -3,7 +3,6 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 import modal
 
@@ -30,7 +29,7 @@ hf_cache = modal.Volume.from_name("hf-cache", create_if_missing=True)
     timeout=900,
     volumes={"/root/.cache/huggingface": hf_cache},
 )
-def extract_invoice(img_bytes: bytes):
+def extract_invoice(img_bytes: bytes, pydantic_model: type):
     # This function reads the jpeg that was converted to bytes and returns a JSON with the appropriate structure defined through Pydantic.
     import gc
     import json
@@ -39,6 +38,7 @@ def extract_invoice(img_bytes: bytes):
     from pathlib import Path
 
     from pydantic import AliasChoices, BaseModel, Field
+    from typing import Optional
 
     import torch
     from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
@@ -50,31 +50,6 @@ def extract_invoice(img_bytes: bytes):
         ExtractionVlmPipeline,
         ImageDocumentBackend,
     )
-
-    # PYDANTIC MODELS FOR DATA VALIDATION:
-    class InvoiceHeader(BaseModel):
-        invoice_no: Optional[str] = Field(default=None, validation_alias=AliasChoices("Invoice no", "Invoice Number", "Invoice number"))
-        invoice_date: Optional[str] = Field(default=None, validation_alias=AliasChoices("Invoice date", "Date"))
-        seller: Optional[str] = Field(default=None, validation_alias=AliasChoices("Seller", "Vendor", "Supplier"))
-        client: Optional[str] = Field(default=None, validation_alias=AliasChoices("Buyer", "Client", "Customer"))
-        seller_tax_id: Optional[str] = Field(default=None, validation_alias=AliasChoices("Seller tax id", "seller_tax_id"))
-        client_tax_id: Optional[str] = Field(default=None, validation_alias=AliasChoices("Client tax id", "client_tax_id"))
-        iban: Optional[str] = Field(default=None, validation_alias=AliasChoices("IBAN", "iban", "Account number"))
-    class InvoiceItem(BaseModel):
-        item_desc: Optional[str] = Field(default=None, validation_alias=AliasChoices("Description", "description", "Item description"))
-        item_qty: Optional[str] = Field(default=None, validation_alias=AliasChoices("Quantity", "Item quantity"))
-        item_net_price: Optional[str] = Field(default=None, validation_alias=AliasChoices("Price", "Item net price", "Net price"))
-        item_vat: Optional[str] = Field(default=None, validation_alias=AliasChoices("vat", "Item vat", "VAT", "Tax"))
-    class InvoiceSummary(BaseModel):
-        total_net_worth: Optional[str] = Field(default=None, validation_alias=AliasChoices("total_net_worth", "total worth", "Total worth"))
-        total_vat: Optional[str] = Field(default=None, validation_alias=AliasChoices("total_vat", "total vat", "Total VAT", "Total tax"))
-    class GtParse(BaseModel):
-        header: InvoiceHeader
-        items: list[InvoiceItem]
-        summary: InvoiceSummary
-    class InvoiceDocument(BaseModel):
-        gt_parse: GtParse
-
 
     acc_options = AcceleratorOptions(device=AcceleratorDevice.CUDA)
     pipeline_options = VlmExtractionPipelineOptions(accelerator_options=acc_options)
@@ -99,7 +74,7 @@ def extract_invoice(img_bytes: bytes):
         try:
             result = extractor.extract(
                 source=tmp_path,
-                template=InvoiceDocument,   #The pydantic model that defines the expected JSON structure
+                template=pydantic_model,   #The pydantic model that defines the expected JSON structure, this is passed by process_new_files_for_all_ds.py by using the ds-model mapping in registry.py
                 raises_on_error=True,
             )
         finally:
@@ -115,7 +90,7 @@ def extract_invoice(img_bytes: bytes):
 
 
 @app.local_entrypoint()
-def main(image_path: str):
+def main(image_path: str, pydantic_model: type):
     img_bytes = Path(image_path).read_bytes()
-    result = extract_invoice.remote(img_bytes)
+    result = extract_invoice.remote(img_bytes, pydantic_model)
     print(json.dumps(result, indent=2))
