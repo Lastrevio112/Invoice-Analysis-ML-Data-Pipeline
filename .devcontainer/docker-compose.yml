@@ -5,6 +5,7 @@ services:
       dockerfile: .devcontainer/Dockerfile
     volumes:
       - ..:/workspace
+      - ~/.modal.toml:/root/.modal.toml:ro  # mount Modal token into container
     command: sleep infinity
     environment:
       - PYTHONPATH=/workspace
