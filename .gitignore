@@ -7,7 +7,9 @@ dbt/logs
 dbt/dbt_packages
 dbt/target
 dbt/.user.yml
+dbt/models/gold/test_queries.sql
 # Python
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+testing_stuff.ipynb

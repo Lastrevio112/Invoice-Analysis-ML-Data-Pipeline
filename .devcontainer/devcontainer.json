@@ -10,7 +10,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "dbt-labs.dbt-power-user",
+        "innoverio.vscode-dbt-power-user",
         "Fivetran.dbt-language-server",
         "ms-python.python",
         "ms-python.pylance",
@@ -30,6 +30,7 @@
         // DBT Power User settings
         "dbt.dbtPythonPathOverride": "/usr/local/bin/python",
         "dbt.projectsDir": "/workspace/dbt",
+        "dbt.profilesDir": "/workspace/dbt",
 
         // Jupyter settings
         "jupyter.notebookFileRoot": "/workspace",
