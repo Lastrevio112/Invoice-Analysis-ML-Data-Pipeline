@@ -31,9 +31,9 @@ def processNewFilesInDatasource(DataSourceId: int):
     bucket_name = f"ds{DataSourceId}"
     bigquery_destination_table = f"invoiceanalysispipeline.bronze.ds_{DataSourceId}_raw_json"
 
-    model_name = DS_MODEL_NAME_REGISTRY.get(ds_id) #mapping between ds id and pydantic model is defined in registry.py
+    model_name = DS_MODEL_NAME_REGISTRY.get(DataSourceId) #mapping between ds id and pydantic model is defined in registry.py
     if model_name is None:
-        raise ValueError(f"No Pydantic model registered for datasource {ds_id}")   
+        raise ValueError(f"No Pydantic model registered for datasource {DataSourceId}")   
     
     MAX_FILES_PER_RUN = 500 # GitHub actions has a max runtime of 6 hours, and based on testing, processing each file takes around 30-40 seconds on average. So we can process around 540 files in one run to avoid timeouts, but to be safe we set the limit a bit lower.
 
