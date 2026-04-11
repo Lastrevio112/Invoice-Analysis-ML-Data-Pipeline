@@ -12,7 +12,7 @@ from google.cloud import bigquery
 load_dotenv()
 
 # Connects to the already-deployed app — no new app is created
-extract_invoice = modal.Function.lookup("invoice-extractor", "extract_invoice")
+extract_invoice = modal.Function.from_name("invoice-extractor", "extract_invoice")
 
 s3 = boto3.client(
     "s3",
@@ -66,8 +66,8 @@ def processNewFilesInDatasource(DataSourceId: int):
 
 
 if __name__ == "__main__":
-    rows = bq.query("SELECT datasource_id FROM `invoiceanalysispipeline.conf.conf_data_source`").result()
-    list_of_datasource_ids = [row["datasource_id"] for row in rows]
+    rows = bq.query("SELECT id FROM `invoiceanalysispipeline.conf.conf_data_source`").result()
+    list_of_datasource_ids = [row["id"] for row in rows]
 
     for ds_id in list_of_datasource_ids:
         print(f"Processing datasource {ds_id}...")

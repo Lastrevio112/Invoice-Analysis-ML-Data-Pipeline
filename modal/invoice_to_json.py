@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional
 
 import modal
-from pydantic import AliasChoices, BaseModel, Field
 
 app = modal.App("invoice-extractor")
 
@@ -25,39 +24,6 @@ modal_image = (
 hf_cache = modal.Volume.from_name("hf-cache", create_if_missing=True)
 
 
-# PYDANTIC MODELS FOR DATA VALIDATION:
-class InvoiceHeader(BaseModel):
-    invoice_no: Optional[str] = Field(default=None, validation_alias=AliasChoices("Invoice no", "Invoice Number", "Invoice number"))
-    invoice_date: Optional[str] = Field(default=None, validation_alias=AliasChoices("Invoice date", "Date"))
-    seller: Optional[str] = Field(default=None, validation_alias=AliasChoices("Seller", "Vendor", "Supplier"))
-    client: Optional[str] = Field(default=None, validation_alias=AliasChoices("Buyer", "Client", "Customer"))
-    seller_tax_id: Optional[str] = Field(default=None, validation_alias=AliasChoices("Seller tax id", "seller_tax_id"))
-    client_tax_id: Optional[str] = Field(default=None, validation_alias=AliasChoices("Client tax id", "client_tax_id"))
-    iban: Optional[str] = Field(default=None, validation_alias=AliasChoices("IBAN", "iban", "Account number"))
-
-
-class InvoiceItem(BaseModel):
-    item_desc: Optional[str] = Field(default=None, validation_alias=AliasChoices("Description", "description", "Item description"))
-    item_qty: Optional[str] = Field(default=None, validation_alias=AliasChoices("Quantity", "Item quantity"))
-    item_net_price: Optional[str] = Field(default=None, validation_alias=AliasChoices("Price", "Item net price", "Net price"))
-    item_vat: Optional[str] = Field(default=None, validation_alias=AliasChoices("vat", "Item vat", "VAT", "Tax"))
-
-
-class InvoiceSummary(BaseModel):
-    total_net_worth: Optional[str] = Field(default=None, validation_alias=AliasChoices("total_net_worth", "total worth", "Total worth"))
-    total_vat: Optional[str] = Field(default=None, validation_alias=AliasChoices("total_vat", "total vat", "Total VAT", "Total tax"))
-
-
-class GtParse(BaseModel):
-    header: InvoiceHeader
-    items: list[InvoiceItem]
-    summary: InvoiceSummary
-
-
-class InvoiceDocument(BaseModel):
-    gt_parse: GtParse
-
-
 @app.function(
     gpu="L4",   #The second worst GPU, but will do the job.
     image=modal_image,
@@ -72,6 +38,8 @@ def extract_invoice(img_bytes: bytes):
     import tempfile
     from pathlib import Path
 
+    from pydantic import AliasChoices, BaseModel, Field
+
     import torch
     from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
@@ -82,6 +50,31 @@ def extract_invoice(img_bytes: bytes):
         ExtractionVlmPipeline,
         ImageDocumentBackend,
     )
+
+    # PYDANTIC MODELS FOR DATA VALIDATION:
+    class InvoiceHeader(BaseModel):
+        invoice_no: Optional[str] = Field(default=None, validation_alias=AliasChoices("Invoice no", "Invoice Number", "Invoice number"))
+        invoice_date: Optional[str] = Field(default=None, validation_alias=AliasChoices("Invoice date", "Date"))
+        seller: Optional[str] = Field(default=None, validation_alias=AliasChoices("Seller", "Vendor", "Supplier"))
+        client: Optional[str] = Field(default=None, validation_alias=AliasChoices("Buyer", "Client", "Customer"))
+        seller_tax_id: Optional[str] = Field(default=None, validation_alias=AliasChoices("Seller tax id", "seller_tax_id"))
+        client_tax_id: Optional[str] = Field(default=None, validation_alias=AliasChoices("Client tax id", "client_tax_id"))
+        iban: Optional[str] = Field(default=None, validation_alias=AliasChoices("IBAN", "iban", "Account number"))
+    class InvoiceItem(BaseModel):
+        item_desc: Optional[str] = Field(default=None, validation_alias=AliasChoices("Description", "description", "Item description"))
+        item_qty: Optional[str] = Field(default=None, validation_alias=AliasChoices("Quantity", "Item quantity"))
+        item_net_price: Optional[str] = Field(default=None, validation_alias=AliasChoices("Price", "Item net price", "Net price"))
+        item_vat: Optional[str] = Field(default=None, validation_alias=AliasChoices("vat", "Item vat", "VAT", "Tax"))
+    class InvoiceSummary(BaseModel):
+        total_net_worth: Optional[str] = Field(default=None, validation_alias=AliasChoices("total_net_worth", "total worth", "Total worth"))
+        total_vat: Optional[str] = Field(default=None, validation_alias=AliasChoices("total_vat", "total vat", "Total VAT", "Total tax"))
+    class GtParse(BaseModel):
+        header: InvoiceHeader
+        items: list[InvoiceItem]
+        summary: InvoiceSummary
+    class InvoiceDocument(BaseModel):
+        gt_parse: GtParse
+
 
     acc_options = AcceleratorOptions(device=AcceleratorDevice.CUDA)
     pipeline_options = VlmExtractionPipelineOptions(accelerator_options=acc_options)
