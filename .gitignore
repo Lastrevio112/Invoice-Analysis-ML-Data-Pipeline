@@ -1,3 +1,13 @@
+# keys and stuff
 .env
 .gcp-service-account.json
+# dbt
 profiles.yml
+dbt/logs
+dbt/dbt_packages
+dbt/target
+dbt/.user.yml
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

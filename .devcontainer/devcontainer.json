@@ -1,8 +1,11 @@
 {
   "name": "Invoice-Analysis-ML-Data-Pipeline",
   "dockerComposeFile": "docker-compose.yml",
-  "service": "dev",
+  "service": "app",
   "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {} // Git CLI hosted on host's container, not on Docker
+  },
 
   "customizations": {
     "vscode": {
