@@ -29,11 +29,16 @@ def processNewFilesInDatasource(DataSourceId: int):
     bucket_name = f"ds{DataSourceId}"
     bigquery_destination_table = f"invoiceanalysispipeline.bronze.ds_{DataSourceId}_raw_json"
 
+    MAX_FILES_PER_RUN = 520 # GitHub actions has a max runtime of 6 hours, and based on testing, processing each file takes around 30-40 seconds on average. So we can process around 540 files in one run to avoid timeouts, but to be safe we set the limit a bit lower.
+
     response = s3.list_objects_v2(Bucket=bucket_name, Prefix="unprocessed/")
-    files = [obj["Key"] for obj in response.get("Contents", []) if obj["Key"].endswith((".jpg", ".jpeg", ".png", ".pdf"))]
+    files = [
+        obj["Key"] for obj in response.get("Contents", []) 
+        if obj["Key"].endswith((".jpg", ".jpeg", ".png", ".pdf"))
+        ][:MAX_FILES_PER_RUN]
 
     if not files:
-        print("No new files to process for datasource ", DataSourceId)
+        print("No new files to process for datasource", DataSourceId)
         return
 
     for key in files:
