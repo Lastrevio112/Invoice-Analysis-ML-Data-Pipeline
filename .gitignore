@@ -17,3 +17,5 @@ testing_stuff.ipynb
 sample_invoices
 # VS code
 settings.json
+# temp files used for ML validation
+first_70_invoices_DS2.txt
