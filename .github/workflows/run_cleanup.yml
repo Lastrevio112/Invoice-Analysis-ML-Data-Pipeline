@@ -2,7 +2,7 @@
 # Every 24 hours run cleanup_startedprocessing_folder.py to check for old files in startedprocessing/ in R2.
 # If there are no files that have been there for more than an hour, do nothing. If there are, move them back to unprocessed/ for retries.
 
-name: Pipeline orchestrator
+name: Cleanup orchestrator
 
 on:
   schedule:
