@@ -20,5 +20,5 @@ models:
       +incremental_strategy: merge  #upsert
       +schema: silver
     gold:
-      +materialized: table
+      +materialized: table          #for faster reads than a view, needed for analytics
       +schema: gold
