@@ -27,6 +27,9 @@ WHERE rn = 1
 /*
 UNION ALL
 SELECT
+    {{ fact_invoice_line_columns() }}
+FROM ds2_duplicates
+WHERE rn = 1
 ...
 add here the next data source
 */
