@@ -3,6 +3,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+import subprocess
 
 import boto3
 import modal
@@ -26,6 +27,33 @@ s3 = boto3.client(
 
 bq = bigquery.Client(project="invoiceanalysispipeline")
 
+# Run a dbt command and raise error if it fails.
+def run_dbt(command: str):
+    result = subprocess.run(
+        #cwd and dbt profiles are set to dbt/ relative to the script's own location via Path(__file__).parent, so they resolve correctly when ran from both vs code and from github actions
+        ["dbt", command],
+        cwd=Path(__file__).parent.parent / "dbt",
+        env={**os.environ, "DBT_PROFILES_DIR": str(Path(__file__).parent.parent / "dbt")},
+        capture_output=True,
+        text=True,
+    )
+    print(result.stdout)
+    if result.returncode != 0:
+        print(result.stderr)
+        raise RuntimeError(f"dbt {command} failed with exit code {result.returncode}")
+
+
+# Cut + paste between two R2 paths:
+def move_file_in_r2(bucket_name: str, source_key: str, destination_key: str):
+    # File in R2 is first copied to new location
+    s3.copy_object(
+        CopySource={"Bucket": bucket_name, "Key": source_key},
+        Bucket=bucket_name,
+        Key=destination_key,
+    )
+    # Then deleted from original location
+    s3.delete_object(Bucket=bucket_name, Key=source_key)
+
 
 def processNewFilesInDatasource(DataSourceId: int):
     bucket_name = f"ds{DataSourceId}"
@@ -47,32 +75,42 @@ def processNewFilesInDatasource(DataSourceId: int):
         print("No new files to process for datasource", DataSourceId)
         return
 
+    # For every file in unprocessed/ bucket, run this loop:
     for key in files:
         filename = Path(key).name
         print(f"Processing {filename}")
 
-        # Download image bytes
-        img_bytes = s3.get_object(Bucket=bucket_name, Key=key)["Body"].read()
-
-        # Move to startedprocessing/ immediately to prevent double-processing
         processing_key = f"startedprocessing/{filename}"
-        s3.copy_object(
-            CopySource={"Bucket": bucket_name, "Key": key},
-            Bucket=bucket_name,
-            Key=processing_key,
-        )
-        s3.delete_object(Bucket=bucket_name, Key=key)
+        processed_key = f"processed/{filename}"
 
-        # Call already-deployed Modal function
-        result_json = extract_invoice.remote(img_bytes, model_name)
+        # STEP 1: Move file from unprocessed/ to startedprocessing/
+        move_file_in_r2(bucket_name, key, processing_key)
 
-        # Insert into BigQuery bronze
+        # STEP 2: Run ML model inference
+        img_bytes = s3.get_object(Bucket=bucket_name, Key=processing_key)["Body"].read()   # Download image bytes
+        result_json = extract_invoice.remote(img_bytes, model_name)             # Call already-deployed Modal function
+
+        # STEP 3: Insert into BigQuery bronze
         row = {
             "id": str(uuid.uuid4()),
             "raw_json": json.dumps(result_json),
             "inserted_at": datetime.now(timezone.utc).isoformat(),
         }
         bq.insert_rows_json(bigquery_destination_table, [row])
+        print(f"Inserted into BigQuery's bronze layer: {filename}")
+
+        # STEP 4: Run dbt models to insert into silver and gold layers in BigQuery
+        run_dbt("run")
+        print("Completed dbt run command succesfully.")
+
+        # STEP 5: Run dbt tests to validate data quality in silver and gold layers
+        run_dbt("test")
+        print("Tests passed successfully.")
+
+        # STEP 6: If everything is successful, move file from startedprocessing/ to processed/
+        # If something failed midway, the file will remain in startedprocessing/ and a second pipeline will periodically move files back to unprocessed/ for retries
+        move_file_in_r2(bucket_name, processing_key, processed_key)
+
         print(f"Done: {filename}")
 
 
@@ -81,5 +119,5 @@ if __name__ == "__main__":
     list_of_datasource_ids = [row["id"] for row in rows]
 
     for ds_id in list_of_datasource_ids:
-        print(f"Processing datasource {ds_id}...")
+        print(f"\nProcessing datasource {ds_id}...")
         processNewFilesInDatasource(ds_id)
