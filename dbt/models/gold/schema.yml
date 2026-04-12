@@ -25,3 +25,28 @@ models:
       - name: buyer_no
         tests:
           - not_null
+  - name: fact_invoice_line
+    columns:
+      - name: data_source_id
+        tests:
+          - not_null
+      - name: row_id
+        tests:
+          - unique
+          - not_null
+      - name: unique_invoice_line_no
+        tests:
+          - not_null
+      - name: unique_invoice_no
+        tests:
+          - not_null
+      - name: vendor_no_id
+        tests:
+          - relationships:
+              to: ref('dim_vendor')
+              field: vendor_no_id
+      - name: buyer_no_id
+        tests:
+          - relationships:
+              to: ref('dim_buyer')
+              field: buyer_no_id
