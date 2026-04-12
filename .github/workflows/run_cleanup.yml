@@ -11,7 +11,7 @@ on:
 
 concurrency:
   group: orchestration-pipeline
-  cancel-in-progress: true  # If a run is in progress, skip the scheduled one. Almost impossible for a simple copy of files to take more than 24 hours to finish but you never know how someone might trigger it manually.
+  cancel-in-progress: true  # If a run is in progress, skip the scheduled one. Almost impossible for a simple copy of files to take more than 24 hours to finish but you never know how someone might trigger it manually at 23:59.
 
 jobs:
   deploy:
