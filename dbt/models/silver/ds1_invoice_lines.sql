@@ -26,7 +26,7 @@ WITH flattened AS (
 
     ROW_NUMBER() OVER (PARTITION BY JSON_VALUE(raw_json, '$.gt_parse.header.invoice_no') ORDER BY SAFE_CAST(JSON_VALUE(raw_json, '$.gt_parse.summary.total_net_worth') AS FLOAT64)) AS rn --for de-duplication in case someone inserts an invoice multiple times in the same bucket
 
-  FROM `invoiceanalysispipeline.bronze.ds_1_raw_json`
+  FROM {{source('bronze', 'ds_1_raw_json')}}
 )
 SELECT
   -- unique key generation for this specific data source
