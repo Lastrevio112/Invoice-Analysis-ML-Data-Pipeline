@@ -31,6 +31,12 @@ jobs:
           echo '${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}' > ${{ github.workspace }}/.gcp-service-account.json
           echo "GCP_KEYFILE_PATH=${{ github.workspace }}/.gcp-service-account.json" >> $GITHUB_ENV
 
+      - name: dbt deps
+        working-directory: dbt
+        run: dbt deps
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+
       - name: Execute python pipeline script
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
