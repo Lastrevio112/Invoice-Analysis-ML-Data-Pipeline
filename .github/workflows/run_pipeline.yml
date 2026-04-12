@@ -1,0 +1,42 @@
+# Data pipeline orchestrator
+# Every 15 minutes run process_new_files_for_all_ds.py to check for new files in unprocessed/ in R2.
+# If there are no new files, do nothing. If there are new files, run the full pipeline. This implements change-data-capture through polling.
+
+name: Pipeline orchestrator
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Run every 15 minutes
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        shell: bash
+        run: pip install -r requirements.txt
+
+      - name: Write GCP service account key
+        run: |
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}' > ${{ github.workspace }}/.gcp-service-account.json
+          echo "GCP_KEYFILE_PATH=${{ github.workspace }}/.gcp-service-account.json" >> $GITHUB_ENV
+
+      - name: Execute python pipeline script
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/.gcp-service-account.json
+        run: cd modal && python process_new_files_for_all_ds.py   #Run the main pipeline after setting up everything.
