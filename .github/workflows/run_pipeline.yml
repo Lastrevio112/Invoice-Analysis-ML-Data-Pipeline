@@ -39,6 +39,7 @@ jobs:
 
       - name: Execute python pipeline script
         env:
+          PYTHONUNBUFFERED: "1"
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
