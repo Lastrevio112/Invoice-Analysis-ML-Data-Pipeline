@@ -7,6 +7,6 @@ invoice_pipeline:
       project: invoiceanalysispipeline  
       dataset: invoices              
       location: EU
-      keyfile: /workspace/.gcp-service-account.json
+      keyfile: "{{ env_var('GCP_KEYFILE_PATH', '/workspace/.gcp-service-account.json') }}"
       threads: 4
       timeout_seconds: 900
