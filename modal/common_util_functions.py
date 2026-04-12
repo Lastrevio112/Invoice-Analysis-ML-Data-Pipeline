@@ -1,4 +1,3 @@
-# Cut + paste between two R2 paths:
 import sys
 sys.path.append('/workspace/modal') #So that this is visible from workspace/ and not only from workspace/modal/
 
