@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from google.cloud import bigquery
 
 from pydantic_models.registry import DS_MODEL_NAME_REGISTRY
+from common_util_functions import move_file_in_r2, get_list_of_datasource_ids
 
 load_dotenv()
 
@@ -42,18 +43,6 @@ def run_dbt(command: str):
     if result.returncode != 0:
         print(result.stderr)
         raise RuntimeError(f"dbt {command} failed with exit code {result.returncode}")
-
-
-# Cut + paste between two R2 paths:
-def move_file_in_r2(bucket_name: str, source_key: str, destination_key: str):
-    # File in R2 is first copied to new location
-    s3.copy_object(
-        CopySource={"Bucket": bucket_name, "Key": source_key},
-        Bucket=bucket_name,
-        Key=destination_key,
-    )
-    # Then deleted from original location
-    s3.delete_object(Bucket=bucket_name, Key=source_key)
 
 
 # Convert each page of a PDF into JPEG bytes. Useful for data source 2, as raw data is PDF there and invoice_to_json.py expects bytes.
@@ -99,7 +88,7 @@ def processNewFilesInDatasource(DataSourceId: int):
         processed_key = f"processed/{filename}"
 
         # STEP 1: Move file from unprocessed/ to startedprocessing/
-        move_file_in_r2(bucket_name, key, processing_key)
+        move_file_in_r2(s3, bucket_name, key, processing_key)
         print(f"Moved {filename} to {processing_key}, starting processing...")
 
         # STEP 2: Run ML model inference
@@ -141,14 +130,13 @@ def processNewFilesInDatasource(DataSourceId: int):
 
         # STEP 7: If everything is successful, move file from startedprocessing/ to processed/
         # If something failed midway, the file will remain in startedprocessing/ and a second pipeline will periodically move files back to unprocessed/ for retries
-        move_file_in_r2(bucket_name, processing_key, processed_key)
+        move_file_in_r2(s3, bucket_name, processing_key, processed_key)
 
         print(f"Done: {filename}")
 
 
 if __name__ == "__main__":
-    rows = bq.query("SELECT id FROM `invoiceanalysispipeline.conf.conf_data_source`").result()
-    list_of_datasource_ids = [row["id"] for row in rows]
+    list_of_datasource_ids = get_list_of_datasource_ids()
 
     for ds_id in list_of_datasource_ids:
         print(f"\nProcessing datasource {ds_id}...")
