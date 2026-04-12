@@ -4,13 +4,14 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
+import fitz
 
 import boto3
 import modal
 from dotenv import load_dotenv
 from google.cloud import bigquery
 
-from pydantic_models.registry import DS_MODEL_REGISTRY, DS_MODEL_NAME_REGISTRY
+from pydantic_models.registry import DS_MODEL_NAME_REGISTRY
 
 load_dotenv()
 
@@ -55,6 +56,20 @@ def move_file_in_r2(bucket_name: str, source_key: str, destination_key: str):
     s3.delete_object(Bucket=bucket_name, Key=source_key)
 
 
+# Convert each page of a PDF into JPEG bytes. Useful for data source 2, as raw data is PDF there and invoice_to_json.py expects bytes.
+def pdf_to_image_bytes_list(pdf_bytes: bytes, dpi: int = 150) -> list[bytes]:
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    pages_as_images = []
+    for page in doc:
+        mat = fitz.Matrix(dpi / 72, dpi / 72)  # 72 is PDF's base DPI
+        pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
+        pages_as_images.append(pix.tobytes("jpeg"))
+    doc.close()
+    return pages_as_images
+
+
+# Main function ran by this script - 
+# it polls the unprocessed/ folder of every R2 bucket for new files and runs the steps of the pipeline if any are found.
 def processNewFilesInDatasource(DataSourceId: int):
     bucket_name = f"ds{DataSourceId}"
     bigquery_destination_table = f"invoiceanalysispipeline.bronze.ds_{DataSourceId}_raw_json"
@@ -88,8 +103,19 @@ def processNewFilesInDatasource(DataSourceId: int):
         print(f"Moved {filename} to {processing_key}, starting processing...")
 
         # STEP 2: Run ML model inference
-        img_bytes = s3.get_object(Bucket=bucket_name, Key=processing_key)["Body"].read()   # Download image bytes
-        result_json = extract_invoice.remote(img_bytes, model_name)             # Call already-deployed Modal function
+        s3_read_download = s3.get_object(Bucket=bucket_name, Key=processing_key)["Body"].read()
+
+        # 2.1: Download image bytes
+        if processing_key.endswith(".pdf"):
+            pages = pdf_to_image_bytes_list(s3_read_download)
+            # Invoices are typically single-page, and they always are for DS 2, so take page 0. Can be changed to a loop in the future if it ever becomes an issue.
+            img_bytes = pages[0]
+        else:
+            img_bytes = s3_read_download  # already an image, pass through unchanged   
+
+        # 2.2: Call cloud-deployed Modal function
+        result_json = extract_invoice.remote(img_bytes, model_name)
+
         print(f"Completed ML inference for {filename}")
 
         # STEP 3: Validate JSON output to account for network errors
