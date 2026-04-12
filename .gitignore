@@ -15,3 +15,5 @@ __pycache__/
 testing_stuff.ipynb
 # unnecessary folder that was used just for testing
 sample_invoices
+# VS code
+settings.json
