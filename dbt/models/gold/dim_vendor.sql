@@ -9,7 +9,7 @@ WITH ds1_duplicates AS (
     FROM {{ ref('ds1_invoice_lines') }}
 )
 /* Add here next data source logic:
---,WITH ds1_duplicates AS(
+--,WITH ds2_duplicates AS(
 )
 */
 SELECT
