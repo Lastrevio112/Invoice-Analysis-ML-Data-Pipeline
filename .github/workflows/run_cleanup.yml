@@ -1,0 +1,42 @@
+# Data cleanup orchestrator
+# Every 24 hours run cleanup_startedprocessing_folder.py to check for old files in startedprocessing/ in R2.
+# If there are no files that have been there for more than an hour, do nothing. If there are, move them back to unprocessed/ for retries.
+
+name: Pipeline orchestrator
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run everyday at midnight
+  workflow_dispatch:
+
+concurrency:
+  group: orchestration-pipeline
+  cancel-in-progress: true  # If a run is in progress, skip the scheduled one. Almost impossible for a simple copy of files to take more than 24 hours to finish but you never know how someone might trigger it manually.
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        shell: bash
+        run: pip install -r requirements.txt
+
+      - name: Execute python pipeline script
+        env:
+          PYTHONUNBUFFERED: "1"
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/.gcp-service-account.json
+        run: cd modal && python cleanup_startedprocessing_folder.py   #Run the cleanup pipeline after setting up everything.
