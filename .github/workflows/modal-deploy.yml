@@ -1,7 +1,7 @@
 # CI/CD pipeline
 # Whenever there is any chhange to the invoice_to_json.py file (or to pydantic models), deploy this file to Modal.com
 
-name: Modal Deploy — invoice_to_json
+name: Modal Deploy - invoice_to_json
 
 on:
   push:
