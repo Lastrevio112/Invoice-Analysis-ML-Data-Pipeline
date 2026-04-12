@@ -1,0 +1,35 @@
+# CI/CD pipeline
+# Whenever there is any chhange to the invoice_to_json.py file, deploy this file to Modal.com
+
+name: Modal Deploy — invoice_to_json
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'modal/invoice_to_json.py'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        shell: bash
+        run: pip install -r requirements.txt
+
+      - name: Deploy to Modal
+        shell: bash
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: modal deploy modal/invoice_to_json.py

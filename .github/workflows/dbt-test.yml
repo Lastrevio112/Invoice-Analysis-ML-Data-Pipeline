@@ -1,0 +1,44 @@
+# CI/CD pipeline
+# Run dbt test whenever there is any code change in the dbt/ subfolder.
+
+name: dbt Test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dbt/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'dbt/**'
+
+jobs:
+  dbt-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: dbt deps
+        working-directory: dbt
+        run: dbt deps
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+
+      - name: dbt test
+        working-directory: dbt
+        run: dbt test
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt

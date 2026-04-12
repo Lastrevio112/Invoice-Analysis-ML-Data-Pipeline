@@ -1,0 +1,14 @@
+# This workflow is designed to keep GitHub Actions active so that actions keeps working even after 60 days of repo inactivity
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: '0 12 1 * *'   # runs on the 1st of every month at noon UTC
+  workflow_dispatch:         # also manually triggerable
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep repo active
+        run: echo "Keeping Actions alive — $(date -u)"
