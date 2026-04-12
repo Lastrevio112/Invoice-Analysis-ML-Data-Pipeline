@@ -14,7 +14,10 @@ modal_image = (
         "bitsandbytes",
         "pydantic",
     )
-    .add_local_dir("../modal/pydantic_models", remote_path="/root/pydantic_models")
+    .add_local_dir(
+        Path(__file__).parent / "pydantic_models",
+        remote_path="/root/pydantic_models"
+    )
 )
 
 # This will be added once through the windows powershell terminal and then cached by Modal.
