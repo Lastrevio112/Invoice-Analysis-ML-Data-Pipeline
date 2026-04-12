@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: dim_vendor
+    columns:
+      - name: data_source_id
+        tests:
+          - not_null
+      - name: vendor_no_id
+        tests:
+          - unique
+          - not_null
+      - name: vendor_no
+        tests:
+          - not_null
