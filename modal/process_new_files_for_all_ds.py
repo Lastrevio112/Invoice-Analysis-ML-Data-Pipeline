@@ -78,19 +78,25 @@ def processNewFilesInDatasource(DataSourceId: int):
     # For every file in unprocessed/ bucket, run this loop:
     for key in files:
         filename = Path(key).name
-        print(f"Processing {filename}")
+        print(f"\nProcessing {filename}")
 
         processing_key = f"startedprocessing/{filename}"
         processed_key = f"processed/{filename}"
 
         # STEP 1: Move file from unprocessed/ to startedprocessing/
         move_file_in_r2(bucket_name, key, processing_key)
+        print(f"Moved {filename} to {processing_key}, starting processing...")
 
         # STEP 2: Run ML model inference
         img_bytes = s3.get_object(Bucket=bucket_name, Key=processing_key)["Body"].read()   # Download image bytes
         result_json = extract_invoice.remote(img_bytes, model_name)             # Call already-deployed Modal function
+        print(f"Completed ML inference for {filename}")
 
-        # STEP 3: Insert into BigQuery bronze
+        # STEP 3: Validate JSON output to account for network errors
+        if (result_json is None):
+            raise RuntimeError(f"JSON is empty, aborting processing for {filename}...")                    #no automatic retries because model inference is expensive, better in this case to intervene manually
+
+        # STEP 4: Insert into BigQuery bronze
         row = {
             "id": str(uuid.uuid4()),
             "raw_json": json.dumps(result_json),
@@ -99,15 +105,15 @@ def processNewFilesInDatasource(DataSourceId: int):
         bq.insert_rows_json(bigquery_destination_table, [row])
         print(f"Inserted into BigQuery's bronze layer: {filename}")
 
-        # STEP 4: Run dbt models to insert into silver and gold layers in BigQuery
+        # STEP 5: Run dbt models to insert into silver and gold layers in BigQuery
         run_dbt("run")
         print("Completed dbt run command succesfully.")
 
-        # STEP 5: Run dbt tests to validate data quality in silver and gold layers
+        # STEP 6: Run dbt tests to validate data quality in silver and gold layers
         run_dbt("test")
         print("Tests passed successfully.")
 
-        # STEP 6: If everything is successful, move file from startedprocessing/ to processed/
+        # STEP 7: If everything is successful, move file from startedprocessing/ to processed/
         # If something failed midway, the file will remain in startedprocessing/ and a second pipeline will periodically move files back to unprocessed/ for retries
         move_file_in_r2(bucket_name, processing_key, processed_key)
 
