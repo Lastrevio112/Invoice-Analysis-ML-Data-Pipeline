@@ -65,3 +65,4 @@ class InvoiceDocument_DS2(BaseModel):
     header: InvoiceHeader_DS2
     items: list[InvoiceItem_DS2]
     summary: InvoiceSummary_DS2
+    
