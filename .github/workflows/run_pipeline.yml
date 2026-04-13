@@ -11,7 +11,7 @@ on:
 
 concurrency:
   group: orchestration-pipeline
-  cancel-in-progress: true  # If a run is in progress, skip the scheduled one. This ensures that if a run takes longer than 15 minutes, it won't be interferred with.
+  cancel-in-progress: false  # If a run is in progress, wait in queue. This ensures that if a run takes longer than 15 minutes, it won't be interferred with.
 
 jobs:
   deploy:
