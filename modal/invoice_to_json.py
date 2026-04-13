@@ -94,6 +94,8 @@ def extract_invoice(img_bytes: bytes, pydantic_model_name: str):
         finally:
             os.unlink(tmp_path)
 
+        if (json.loads(result.json())["pages"][0]["extracted_data"] is None):
+            return json.loads(result.json())["pages"][0]["raw_text"]    #fixes a bug where the ML model would sometimes pass the data incorrectly into raw_text instead of extracted_data
         return json.loads(result.json())["pages"][0]["extracted_data"]
 
     finally:
