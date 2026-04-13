@@ -149,6 +149,7 @@ def processNewFilesInDatasource(DataSourceId: int):
         print("No new files to process for datasource", DataSourceId)
         return
 
+    problematic_files = []
     # For every file in unprocessed/ bucket, run this loop:
     for key in files:
         filename = Path(key).name
@@ -157,12 +158,19 @@ def processNewFilesInDatasource(DataSourceId: int):
         except RuntimeError as e: 
             # If it's a RuntimeError (from dbt), kill the loop for this datasource
             print(f"CRITICAL: dbt failed. Aborting loop for {DataSourceId}. Error: {e}")
+            problematic_files.append(str(DataSourceId) + "/" + filename) 
             break
         except Exception as e:
             # If it failed for any other reason than dbt run/dbt test, then abort only this file and continue with the rest.
             print(f"Processing file {filename} failed with error {str(e)}.")
+            problematic_files.append(str(DataSourceId) + "/" + filename)
         else:
             print(f"Done: {filename}")
+    
+    print(f"Finished processing data source {DataSourceId}.")
+    if problematic_files:
+        print("The following files were not processed successfully and need manual review:")
+        print("\n".join(problematic_files))
 
 
 if __name__ == "__main__":
