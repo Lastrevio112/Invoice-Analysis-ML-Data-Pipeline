@@ -19,7 +19,7 @@ WITH flattened AS (
     -- explode the items array
     JSON_QUERY_ARRAY(raw_json, '$.gt_parse.items') AS items,
 
-    raw_json
+    raw_json, inserted_at
 
   FROM {{source('bronze', 'ds_2_raw_json')}}
 )
@@ -36,7 +36,9 @@ WITH flattened AS (
     -- extract fields from each exploded item
     JSON_VALUE(item, '$.item_desc') AS item_desc,
     JSON_VALUE(item, '$.item_rate') AS item_rate,
-    JSON_VALUE(item, '$.item_qty')  AS item_qty
+    JSON_VALUE(item, '$.item_qty')  AS item_qty,
+
+    ROW_NUMBER() OVER (PARTITION BY order_id, JSON_VALUE(item, '$.item_desc') ORDER BY inserted_at DESC) AS rn --for de-duplication in case someone inserts an invoice multiple times in the same bucket
 
   FROM flattened,
   UNNEST(COALESCE(JSON_QUERY_ARRAY(raw_json, '$.items'), ARRAY<JSON>[]))  AS item
@@ -61,3 +63,4 @@ SELECT
   SAFE_CAST(REGEXP_REPLACE(item_qty, r'[$,]', '') AS INT64) AS item_qty
   
 FROM exploded
+WHERE rn = 1
