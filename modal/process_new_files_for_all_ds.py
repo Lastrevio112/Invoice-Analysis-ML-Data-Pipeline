@@ -19,6 +19,8 @@ load_dotenv()
 # Connects to the already-deployed app — no new app is created
 extract_invoice = modal.Function.from_name("invoice-extractor", "extract_invoice")
 
+''' INITIALIZING CLIENTS: '''
+
 s3 = boto3.client(
     "s3",
     endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
@@ -28,6 +30,9 @@ s3 = boto3.client(
 )
 
 bq = bigquery.Client(project="invoiceanalysispipeline")
+
+
+''' HELPER FUNCTIONS: '''
 
 # Run a dbt command and raise error if it fails.
 def run_dbt(command: str):
@@ -57,6 +62,71 @@ def pdf_to_image_bytes_list(pdf_bytes: bytes, dpi: int = 150) -> list[bytes]:
     return pages_as_images
 
 
+def processOneFile(key: str, bucket_name: str, bigquery_destination_table: str, model_name: str):
+    filename = Path(key).name
+    print(f"\nProcessing {filename}")
+
+    processing_key = f"startedprocessing/{filename}"
+    processed_key = f"processed/{filename}"
+
+    # STEP 1: Move file from unprocessed/ to startedprocessing/
+    move_file_in_r2(s3, bucket_name, key, processing_key)
+    print(f"Moved {filename} to {processing_key}, starting processing...")
+
+    # STEP 2: Run ML model inference
+    s3_read_download = s3.get_object(Bucket=bucket_name, Key=processing_key)["Body"].read()
+
+    # 2.1: Download image bytes
+    if processing_key.endswith(".pdf"):
+        pages = pdf_to_image_bytes_list(s3_read_download)
+        # Invoices are typically single-page, and they always are for DS 2, so take page 0. Can be changed to a loop in the future if it ever becomes an issue.
+        img_bytes = pages[0]
+    else:
+        img_bytes = s3_read_download  # already an image, pass through unchanged   
+
+    # 2.2: Call cloud-deployed Modal function
+    try:
+        result_json = extract_invoice.remote(img_bytes, model_name)
+    except Exception as e:
+        print(f"Model inference failed for {filename} with error: {str(e)}")    #Will not raise a runtime error because I want the processing of the other files to continue
+        return
+    else:
+        print(f"Completed ML inference for {filename}")
+
+    # STEP 3: Validate JSON output to account for network errors
+    if (result_json is None):
+        print(f"JSON is empty, aborting processing for {filename}...")
+        return                   #no automatic retries because model inference is expensive, better in this case to intervene manually
+
+    # STEP 4: Insert into BigQuery bronze
+    row = {
+        "id": str(uuid.uuid4()),
+        "raw_json": json.dumps(result_json),
+        "inserted_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        bq.insert_rows_json(bigquery_destination_table, [row])
+    except Exception as e:
+        print(f"Inserting into BigQuery's bronze layer for file {filename} failed with error {str(e)}.\nAborting process for this file...")
+        return
+    else:
+        print(f"Inserted into BigQuery's bronze layer: {filename}")
+
+    # STEP 5: Run dbt models to insert into silver and gold layers in BigQuery
+    run_dbt("run")
+    print("Completed dbt run command succesfully.")
+
+    # STEP 6: Run dbt tests to validate data quality in silver and gold layers
+    run_dbt("test")
+    print("DBT tests passed successfully.")
+
+    # STEP 7: If everything is successful, move file from startedprocessing/ to processed/
+    # If something failed midway, the file will remain in startedprocessing/ and a second pipeline will periodically move files back to unprocessed/ for retries
+    move_file_in_r2(s3, bucket_name, processing_key, processed_key)
+
+
+''' MAIN LOOP: '''
+
 # Main function ran by this script - 
 # it polls the unprocessed/ folder of every R2 bucket for new files and runs the steps of the pipeline if any are found.
 def processNewFilesInDatasource(DataSourceId: int):
@@ -82,57 +152,17 @@ def processNewFilesInDatasource(DataSourceId: int):
     # For every file in unprocessed/ bucket, run this loop:
     for key in files:
         filename = Path(key).name
-        print(f"\nProcessing {filename}")
-
-        processing_key = f"startedprocessing/{filename}"
-        processed_key = f"processed/{filename}"
-
-        # STEP 1: Move file from unprocessed/ to startedprocessing/
-        move_file_in_r2(s3, bucket_name, key, processing_key)
-        print(f"Moved {filename} to {processing_key}, starting processing...")
-
-        # STEP 2: Run ML model inference
-        s3_read_download = s3.get_object(Bucket=bucket_name, Key=processing_key)["Body"].read()
-
-        # 2.1: Download image bytes
-        if processing_key.endswith(".pdf"):
-            pages = pdf_to_image_bytes_list(s3_read_download)
-            # Invoices are typically single-page, and they always are for DS 2, so take page 0. Can be changed to a loop in the future if it ever becomes an issue.
-            img_bytes = pages[0]
+        try:
+            processOneFile(key, bucket_name, bigquery_destination_table, model_name)
+        except RuntimeError as e: 
+            # If it's a RuntimeError (from dbt), kill the loop for this datasource
+            print(f"CRITICAL: dbt failed. Aborting loop for {DataSourceId}. Error: {e}")
+            break
+        except Exception as e:
+            # If it failed for any other reason than dbt run/dbt test, then abort only this file and continue with the rest.
+            print(f"Processing file {filename} failed with error {str(e)}.")
         else:
-            img_bytes = s3_read_download  # already an image, pass through unchanged   
-
-        # 2.2: Call cloud-deployed Modal function
-        result_json = extract_invoice.remote(img_bytes, model_name)
-
-        print(f"Completed ML inference for {filename}")
-
-        # STEP 3: Validate JSON output to account for network errors
-        if (result_json is None):
-            raise RuntimeError(f"JSON is empty, aborting processing for {filename}...")                    #no automatic retries because model inference is expensive, better in this case to intervene manually
-
-        # STEP 4: Insert into BigQuery bronze
-        row = {
-            "id": str(uuid.uuid4()),
-            "raw_json": json.dumps(result_json),
-            "inserted_at": datetime.now(timezone.utc).isoformat(),
-        }
-        bq.insert_rows_json(bigquery_destination_table, [row])
-        print(f"Inserted into BigQuery's bronze layer: {filename}")
-
-        # STEP 5: Run dbt models to insert into silver and gold layers in BigQuery
-        run_dbt("run")
-        print("Completed dbt run command succesfully.")
-
-        # STEP 6: Run dbt tests to validate data quality in silver and gold layers
-        run_dbt("test")
-        print("Tests passed successfully.")
-
-        # STEP 7: If everything is successful, move file from startedprocessing/ to processed/
-        # If something failed midway, the file will remain in startedprocessing/ and a second pipeline will periodically move files back to unprocessed/ for retries
-        move_file_in_r2(s3, bucket_name, processing_key, processed_key)
-
-        print(f"Done: {filename}")
+            print(f"Done: {filename}")
 
 
 if __name__ == "__main__":
