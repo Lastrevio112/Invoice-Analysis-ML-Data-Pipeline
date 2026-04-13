@@ -21,7 +21,7 @@ WITH flattened AS (
 
     raw_json
 
-  FROM {{source('bronze', 'ds_1_raw_json')}}
+  FROM {{source('bronze', 'ds_2_raw_json')}}
 )
 ,exploded AS (
   SELECT
