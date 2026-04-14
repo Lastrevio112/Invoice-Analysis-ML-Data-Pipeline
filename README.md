@@ -95,6 +95,8 @@ Data model for data source 1:
 Data model for data source 2:
 <img width="662" height="682" alt="image" src="https://github.com/user-attachments/assets/416e2559-6887-4480-a17a-16970aca9f03" />
 
+_The pictures above were generated with docglow, special thanks to u/josh_docglow on Reddit for creating this useful tool._
+
 # SOURCES:
 
 Data for data source 1 taken from here: https://huggingface.co/datasets/katanaml-org/invoices-donut-data-v1/viewer/default/validation
