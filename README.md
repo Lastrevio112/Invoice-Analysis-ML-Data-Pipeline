@@ -100,3 +100,17 @@ Data model for data source 2:
 Data for data source 1 taken from here: https://huggingface.co/datasets/katanaml-org/invoices-donut-data-v1/viewer/default/validation
 
 Data for data source 2 taken from here: https://github.com/femstac/Sample-Pdf-invoices
+
+# IMAGES:
+
+<img width="1919" height="865" alt="image" src="https://github.com/user-attachments/assets/f2c35e56-40e5-458e-9a2e-1462b9dd8a5f" />
+
+<img width="1919" height="866" alt="image" src="https://github.com/user-attachments/assets/5a3e4620-f345-4fe9-9348-73fa383d0845" />
+
+<img width="1919" height="873" alt="image" src="https://github.com/user-attachments/assets/0e1268ae-db3b-4ce6-9d34-76d99857c4a7" />
+
+<img width="1919" height="863" alt="image" src="https://github.com/user-attachments/assets/ca4bb84a-403c-4db8-a62e-01f50b84bbc3" />
+
+
+
+
