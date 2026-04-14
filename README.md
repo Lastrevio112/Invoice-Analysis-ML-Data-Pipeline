@@ -6,7 +6,7 @@ CLICK HERE TO SEE THE FRONT END ON STREAMLIT (*END RESULT OF THIS PROJECT*):
 
 https://invoice-analysis-ml-data-pipeline.streamlit.app/
 
-# Summary/Description
+# Summary Description
 This is an end-to-end data pipeline that polls multiple R2 buckets for any new input files, which can be PDFs or images of scanned invoices.
 
 If a new invoice is found, a call is made to a pre-trained ML model (Docling) that's deployed on the cloud (on Modal) to extract JSON data out of the image. 
@@ -16,6 +16,36 @@ It is then processed by BigQuery through dbt in a medallion architecture accross
 GitHub actions was used for both orchestration scheduling and for CI/CD.
 
 The front end BI/dashboard was created in Streamlit, and the link to the app can be accessed from above for anyone to see.
+
+# Tech Stack
+
+-**Cloudflare R2** was used as object-storage for raw data. 
+
+-**Modal.com** was used to deploy the machine learning model in the cloud. 
+
+-**Python** was used for orchestrating the data logic, exception-handling and machine learning deployment. 
+
+-**Docling** was the pre-trained model used to process the unstructured data. 
+
+-**dbt** was used for transformations (with SQL) and **BigQuery** was used as the destination warehouse in the ELT process. 
+
+-**GitHub Actions** was used for both pipeline scheduling and CI/CD. 
+
+-**Docker** was used for containarization. 
+
+-**Streamlit** was used for the frontend.
+
+# Lessons
+
+This project demonstrates:
+
+-How to implement change-data-capture through polling while maintaining idempotency.
+
+-How to use machine learning models to process unstructured data, by first transforming it into semi-structured (JSON) data and then into structured (tabular) data.
+
+-How to integrate multiple data sources in an ELT pipeline with minimal code duplication by adhering to the DRY principle.
+
+-How to implement CI/CD in a data pipeline for automatic testing and ML model deployment, bridging the gap between data engineering and MLOps/DevOps.
 
 # DATA FLOW EXPLAINED
 
@@ -43,7 +73,7 @@ There is a second pipeline under modal/cleanupstartedprocessing_folder.py that p
 
 dbt moves this data accross three layers. After data gets in bronze, the JSON is flattened and the arrays are unnested using BigQquery's native JSON functions; unique surrogate keys are generated and the columns are safely cast to their correct data types. Then data is moved into the 'silver layer' (intermediary) tables (which are different for each data source) with an *upsert* merge data loading type ("incremental" in DBT).
 
-Finally, we have a star schema in the gold layer which is data source agnostic: the main fact table (fact_invoice_line) stores information at the granularity of an invoice line while dim_buyer and dim_vendor store information (name, address) about each buyer and each seller that can appear on the raw invoices.
+Finally, we have a star schema in the gold layer which is data source agnostic: the main fact table (fact_invoice_line) stores information at the granularity of an invoice line while dim_buyer and dim_vendor store information (name, address) about each buyer and each seller that can appear on the raw invoices. Gold layer is materialized as a table and is overwritten with new data each time (truncate & replace mechanism, no incremental load).
 
 **- CI/CD -**
 
