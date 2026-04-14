@@ -22,6 +22,3 @@ models:
     gold:
       +materialized: table          #for faster reads than a view, needed for analytics
       +schema: gold
-    test_ignore:
-      +materialized: ephemeral
-      +schema: test_ignore
