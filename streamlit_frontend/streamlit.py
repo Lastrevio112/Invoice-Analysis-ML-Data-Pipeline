@@ -8,7 +8,6 @@ from streamlit_plotly_events import plotly_events
 from dotenv import load_dotenv
 from google.cloud import bigquery
 from google.oauth2 import service_account
-load_dotenv("/workspace/.env")
 
 # Attempting to get secrets to access bigquery in a way that works both locally and in streamlit cloud
 try:
@@ -18,9 +17,11 @@ try:
         bq = bigquery.Client(credentials=credentials, project=creds_info["project_id"])
     else:
         # This handles the case where the file exists but the key is missing
+        load_dotenv("/workspace/.env")
         bq = bigquery.Client(project="invoiceanalysispipeline")
 except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
     # This will use local .env
+    load_dotenv("/workspace/.env")
     bq = bigquery.Client(project="invoiceanalysispipeline")
 
 st.set_page_config(layout="wide") # Better for BI-style dashboards
