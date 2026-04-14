@@ -7,7 +7,7 @@ dbt/logs
 dbt/dbt_packages
 dbt/target
 dbt/.user.yml
-dbt/models/test_queries.sql
+dbt/models/test_ignore/test_queries.sql
 # Python
 __pycache__/
 *.pyc
