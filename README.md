@@ -1,8 +1,8 @@
 # Scanned Invoices ML Data Pipeline | (BigQuery, Python, dbt, GitHub Actions, Docker, Modal, R2, Streamlit)
-An end-to-end data pipeline that parses image scans of invoices from multiple data sources and loads them into a data warehouse for BI and spend analytics.
+An end-to-end data pipeline that parses image scans of invoices (unstructured data) from multiple data sources and loads them into a data warehouse for BI and spend analytics.
 
 # The deployed app
-CLICK HERE TO SEE THE FRONT END ON STREAMLIT (END RESULT OF THIS PROJECT):
+CLICK HERE TO SEE THE FRONT END ON STREAMLIT (*END RESULT OF THIS PROJECT*):
 
 https://invoice-analysis-ml-data-pipeline.streamlit.app/
 
@@ -68,4 +68,5 @@ Data model for data source 2:
 # SOURCES:
 
 Data for data source 1 taken from here: https://huggingface.co/datasets/katanaml-org/invoices-donut-data-v1/viewer/default/validation
+
 Data for data source 2 taken from here: https://github.com/femstac/Sample-Pdf-invoices
