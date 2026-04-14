@@ -10,3 +10,8 @@ dotenv
 pillow
 pydantic
 pymupdf
+streamlit
+pyarrow
+db-dtypes
+plotly
+streamlit-plotly-events
