@@ -22,6 +22,7 @@ WITH flattened AS (
     raw_json, inserted_at
 
   FROM {{source('bronze', 'ds_2_raw_json')}}
+  WHERE exclude_from_silver = False
 )
 ,exploded AS (
   SELECT
@@ -38,8 +39,7 @@ WITH flattened AS (
     JSON_VALUE(item, '$.item_rate') AS item_rate,
     JSON_VALUE(item, '$.item_qty')  AS item_qty,
 
-    ROW_NUMBER() OVER (PARTITION BY order_id, JSON_VALUE(item, '$.item_desc') ORDER BY inserted_at DESC) AS rn --for de-duplication in case someone inserts an invoice multiple times in the same bucket
-
+    ROW_NUMBER() OVER (PARTITION BY order_id, client ORDER BY inserted_at DESC) AS rn     --De-duplication is necessary to prevent upsert merge conflict. Also, we deduplicate by the unique invoice number combination and take the latest values - this makes backfills/historical updates easier without us having to manually delete any data.
   FROM flattened,
   UNNEST(COALESCE(JSON_QUERY_ARRAY(raw_json, '$.items'), ARRAY<JSON>[]))  AS item
   WHERE JSON_VALUE(item, '$.item_rate') IS NOT NULL OR JSON_VALUE(item, '$.item_qty') IS NOT NULL --when both item_rate and item_qty are null, it means the upstream model mistook an item category that sits below the item for an actual item. this needs to be cleaned downstream.
