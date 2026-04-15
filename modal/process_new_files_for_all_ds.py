@@ -104,7 +104,7 @@ def processOneFile(key: str, bucket_name: str, bigquery_destination_table: str, 
         "raw_json": json.dumps(result_json),
         "inserted_at": datetime.now(timezone.utc).isoformat(),
         "exclude_from_silver": False,
-        "file_name_from_R2": str(filename),
+        "file_name_in_R2": str(filename),
     }
     try:
         bq.insert_rows_json(bigquery_destination_table, [row])
