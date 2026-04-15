@@ -103,6 +103,7 @@ def processOneFile(key: str, bucket_name: str, bigquery_destination_table: str, 
         "id": str(uuid.uuid4()),
         "raw_json": json.dumps(result_json),
         "inserted_at": datetime.now(timezone.utc).isoformat(),
+        "exclude_from_silver": False,
     }
     try:
         bq.insert_rows_json(bigquery_destination_table, [row])
