@@ -58,7 +58,7 @@ def extract_invoice(img_bytes: bytes, pydantic_model_name: str):
 
     # Stupid hack I came up with to dynamically import the necessary model without having to update three registries each time we add a new data source.
     # The pydantic_model_name is passed as a string because Modal can't serialize class objects, and it contains the data source id at the end (e.g. InvoiceDocument_DS1) so we can extract it to know which module to import from.
-    DataSourceId = int(pydantic_model_name[-1]) 
+    DataSourceId = int(pydantic_model_name.split('DS')[1]) 
     module = importlib.import_module(f"pydantic_models.ds{DataSourceId}")
     pydantic_model = getattr(module, pydantic_model_name)
 
