@@ -57,7 +57,7 @@ Each R2 bucket has three sub-directories: unprocessed, startedprocessing, proces
 
 The main script orchestrating this pipeline is process_new_files_for_all_ds.py, found in the modal/ sub-folder of this repo. It polls the unprocessed/ directory of every data source bucket every 15 minutes (scheduled by a cron job on GitHub actions) and if any files are found, they are instantly moved to startedprocessing/. When the pipeline ends, the file is moved from startedprocessing/ to processed/. 
 
-This is how we implement change-data-capture in a safe way while maintaining all our raw data. If a file is in unprocessed/, it is up for either processing or retry. If a file is in startedprocessing/, it means that an attempt was made to process it but it failed midway, so a second pipeline can periodically move files from startedprocessing/ back to unprocessed/. If a file is in processed/, then it has been inserted succesfully in our data warehouse and that registry can be kept asa source of all our raw historical data.
+This is how we implement change-data-capture in a safe way while maintaining all our raw data and achieving **effectivly-once semantics**. If a file is in unprocessed/, it is up for either processing or retry. If a file is in startedprocessing/, it means that an attempt was made to process it but it failed midway, so a second pipeline can periodically move files from startedprocessing/ back to unprocessed/. If a file is in processed/, then it has been inserted succesfully in our data warehouse and that registry can be kept asa source of all our raw historical data.
 
 **- Machine Learning & Exception-Handling Logic -**
 
